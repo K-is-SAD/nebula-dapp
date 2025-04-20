@@ -16,7 +16,7 @@ export default function Header() {
             href="/"
             className="text-2xl font-bold text-blue-500 hover:text-blue-400"
           >
-            Web3 Blog
+            Nebula Blog
           </Link>
           <nav className="hidden md:flex space-x-6">
             <Link href="/" className="text-zinc-300 hover:text-white">

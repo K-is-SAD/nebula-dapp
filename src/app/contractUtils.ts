@@ -8,7 +8,7 @@ export const getBlogContract = () => {
     client,
     chain: blogChain,
     address: contractAddress,
-  });
+  }); 
 };
 
 // Type definitions for our articles

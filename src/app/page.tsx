@@ -70,7 +70,7 @@ export default function Home() {
         <section className="mb-12">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Web3 Blog Platform
+              Nebula Blog Platform
             </h1>
             <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
               Read and publish articles on the blockchain. Pay with crypto to
