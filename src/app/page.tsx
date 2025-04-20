@@ -1,100 +1,139 @@
 "use client";
 
-import Image from "next/image";
-import { ConnectButton } from "thirdweb/react";
-import thirdwebIcon from "@public/thirdweb.svg";
-import { client } from "./client";
+import { useState, useEffect } from "react";
+import { useActiveAccount } from "thirdweb/react";
+import Header from "./components/Header";
+import ArticleCard from "./components/ArticleCard";
+import { ArticlePreview, getBlogContract } from "./contractUtils";
+import Link from "next/link";
 
 export default function Home() {
+  const account = useActiveAccount();
+  const [recentArticles, setRecentArticles] = useState<ArticlePreview[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Dummy data for initial UI development
+  useEffect(() => {
+    // In a real application, you would fetch articles from the blockchain
+    // This is a simplified implementation for demonstration
+    const fetchRecentArticles = async () => {
+      try {
+        setIsLoading(true);
+
+        // For demo purposes only - replace with actual contract calls in production
+        const dummyArticles: ArticlePreview[] = [
+          {
+            id: 0,
+            author: "0x1234567890123456789012345678901234567890",
+            title: "Introduction to Web3 and Blockchain",
+            previewContent:
+              "Web3 represents the next iteration of the internet, built on blockchain technology. In this article, we explore the fundamentals of Web3 and how it differs from traditional web technologies...",
+            timestamp: Math.floor(Date.now() / 1000) - 86400,
+            price: "0.01",
+          },
+          {
+            id: 1,
+            author: "0x2345678901234567890123456789012345678901",
+            title: "Smart Contracts Explained",
+            previewContent:
+              "Smart contracts are self-executing contracts with the terms directly written into code. They automatically enforce and execute agreements when predetermined conditions are met...",
+            timestamp: Math.floor(Date.now() / 1000) - 172800,
+            price: "0.005",
+          },
+          {
+            id: 2,
+            author: "0x3456789012345678901234567890123456789012",
+            title: "The Future of Decentralized Finance",
+            previewContent:
+              "Decentralized Finance (DeFi) is revolutionizing traditional financial systems by removing intermediaries and enabling peer-to-peer transactions...",
+            timestamp: Math.floor(Date.now() / 1000) - 259200,
+            price: "0.02",
+          },
+        ];
+
+        setRecentArticles(dummyArticles);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching recent articles:", error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchRecentArticles();
+  }, []);
+
   return (
-    <main className="p-4 pb-10 min-h-[100vh] flex items-center justify-center container max-w-screen-lg mx-auto">
-      <div className="py-20">
-        <Header />
+    <div className="min-h-screen bg-zinc-950 text-white">
+      <Header />
 
-        <div className="flex justify-center mb-20">
-          <ConnectButton
-            client={client}
-            appMetadata={{
-              name: "Example App",
-              url: "https://example.com",
-            }}
-          />
-        </div>
+      <main className="container mx-auto px-4 py-8">
+        <section className="mb-12">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              Web3 Blog Platform
+            </h1>
+            <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
+              Read and publish articles on the blockchain. Pay with crypto to
+              access premium content.
+            </p>
+          </div>
 
-        <ThirdwebResources />
-      </div>
-    </main>
-  );
-}
+          {account ? (
+            <div className="flex justify-center mb-12">
+              <Link
+                href="/publish"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+              >
+                Publish Your Article
+              </Link>
+            </div>
+          ) : (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 max-w-lg mx-auto text-center mb-12">
+              <h2 className="text-xl font-semibold mb-3">
+                Connect Your Wallet
+              </h2>
+              <p className="text-zinc-400 mb-4">
+                Connect your wallet to publish articles or access premium
+                content.
+              </p>
+            </div>
+          )}
+        </section>
 
-function Header() {
-  return (
-    <header className="flex flex-col items-center mb-20 md:mb-20">
-      <Image
-        src={thirdwebIcon}
-        alt=""
-        className="size-[150px] md:size-[150px]"
-        style={{
-          filter: "drop-shadow(0px 0px 24px #a726a9a8)",
-        }}
-      />
+        <section>
+          <h2 className="text-2xl font-bold mb-6">Recent Articles</h2>
 
-      <h1 className="text-2xl md:text-6xl font-semibold md:font-bold tracking-tighter mb-6 text-zinc-100">
-        thirdweb SDK
-        <span className="text-zinc-300 inline-block mx-1"> + </span>
-        <span className="inline-block -skew-x-6 text-blue-500"> Next.js </span>
-      </h1>
-
-      <p className="text-zinc-300 text-base">
-        Read the{" "}
-        <code className="bg-zinc-800 text-zinc-300 px-2 rounded py-1 text-sm mx-1">
-          README.md
-        </code>{" "}
-        file to get started.
-      </p>
-    </header>
-  );
-}
-
-function ThirdwebResources() {
-  return (
-    <div className="grid gap-4 lg:grid-cols-3 justify-center">
-      <ArticleCard
-        title="thirdweb SDK Docs"
-        href="https://portal.thirdweb.com/typescript/v5"
-        description="thirdweb TypeScript SDK documentation"
-      />
-
-      <ArticleCard
-        title="Components and Hooks"
-        href="https://portal.thirdweb.com/typescript/v5/react"
-        description="Learn about the thirdweb React components and hooks in thirdweb SDK"
-      />
-
-      <ArticleCard
-        title="thirdweb Dashboard"
-        href="https://thirdweb.com/dashboard"
-        description="Deploy, configure, and manage your smart contracts from the dashboard."
-      />
+          {isLoading ? (
+            <div className="grid place-items-center h-64">
+              <div className="text-xl text-zinc-400">Loading articles...</div>
+            </div>
+          ) : recentArticles.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recentArticles.map((article) => (
+                <ArticleCard
+                  key={`${article.author}-${article.id}`}
+                  article={article}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-8 text-center">
+              <h3 className="text-xl font-semibold mb-2">No articles yet</h3>
+              <p className="text-zinc-400 mb-4">
+                Be the first to publish an article on this platform!
+              </p>
+              {account && (
+                <Link
+                  href="/publish"
+                  className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Create New Article
+                </Link>
+              )}
+            </div>
+          )}
+        </section>
+      </main>
     </div>
-  );
-}
-
-function ArticleCard(props: {
-  title: string;
-  href: string;
-  description: string;
-}) {
-  return (
-    <a
-      href={props.href + "?utm_source=next-template"}
-      target="_blank"
-      className="flex flex-col border border-zinc-800 p-4 rounded-lg hover:bg-zinc-900 transition-colors hover:border-zinc-700"
-    >
-      <article>
-        <h2 className="text-lg font-semibold mb-2">{props.title}</h2>
-        <p className="text-sm text-zinc-400">{props.description}</p>
-      </article>
-    </a>
   );
 }
