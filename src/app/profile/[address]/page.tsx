@@ -17,7 +17,7 @@ const client = createThirdwebClient({
 const contract = getContract({
   client,
   chain: defineChain(11155111),
-  address: "0x692A7FaF5e1e9b90A96786F26567e4eC40A0653f",
+  address: process.env.NEXT_PUBLIC_THIRDWEB_CONTRACT_ADDRESS!,
 });
 
 export default function ProfilePage({
