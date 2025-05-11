@@ -1,15 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import {
-  useActiveAccount,
-  useReadContract,
-  useSendTransaction,
-} from "thirdweb/react";
+import { useState, useEffect } from "react";
+import { useActiveAccount, useReadContract } from "thirdweb/react";
 import Header from "@/app/components/Header";
 import { formatDate } from "@/app/contractUtils";
 import Link from "next/link";
-import { prepareContractCall, sendTransaction } from "thirdweb";
+import { prepareContractCall, sendTransaction, readContract } from "thirdweb";
 import { createThirdwebClient, getContract } from "thirdweb";
 import { defineChain } from "thirdweb/chains";
 
@@ -31,14 +27,20 @@ export default function ProfilePage({
 }) {
   const account = useActiveAccount();
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [hasPaid, setHasPaid] = useState(false);
 
-  // Check if the viewed profile is the user's own profile
+  // For splitting articles
+  const [boughtArticles, setBoughtArticles] = useState<any[]>([]);
+  const [notBoughtArticles, setNotBoughtArticles] = useState<any[]>([]);
+  const [checkingPaid, setCheckingPaid] = useState(false);
+
   const isOwnProfile =
     account && account.address.toLowerCase() === params.address.toLowerCase();
   const profileAddress = params.address;
@@ -47,7 +49,6 @@ export default function ProfilePage({
     6
   )}...${profileAddress.slice(-4)}`;
 
-  // Get user articles
   const { data: userArticles, isPending: isLoadingArticles } = useReadContract({
     contract,
     method:
@@ -55,48 +56,111 @@ export default function ProfilePage({
     params: [profileAddress],
   });
 
-  // Get author earnings (only if it's own profile)
   const { data: earningsData, isPending: isLoadingEarnings } = useReadContract({
     contract,
     method: "function authorEarnings(address) view returns (uint256)",
-    params: [profileAddress],
+    params: [params.address],
   });
 
-  // Withdraw earnings transaction
-  const { mutate: sendTransactionMutation, isPending: isWithdrawing } =
-    useSendTransaction();
+  // Split articles into bought and not bought
+  useEffect(() => {
+    const checkBoughtArticles = async () => {
+      if (
+        !userArticles ||
+        !Array.isArray(userArticles) ||
+        !account ||
+        isOwnProfile
+      ) {
+        setBoughtArticles([]);
+        setNotBoughtArticles(userArticles ? [...userArticles] : []);
+        return;
+      }
+      setCheckingPaid(true);
+      const bought: any[] = [];
+      const notBought: any[] = [];
+      // Check payment status for each article (paid only for paid articles)
+      await Promise.all(
+        userArticles.map(async (article: any) => {
+          if (Number(article.price) === 0) {
+            notBought.push(article);
+            return;
+          }
+          try {
+            const paid = await readContract({
+              contract,
+              method:
+                "function hasUserPaidForArticle(address author, uint256 id, address reader) view returns (bool)",
+              params: [params.address, article.id, account.address],
+            });
+            if (paid) {
+              bought.push(article);
+            } else {
+              notBought.push(article);
+            }
+          } catch {
+            notBought.push(article);
+          }
+        })
+      );
+      setBoughtArticles(bought);
+      setNotBoughtArticles(notBought);
+      setCheckingPaid(false);
+    };
+    checkBoughtArticles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userArticles, account, isOwnProfile]);
 
-  const handleWithdrawEarnings = () => {
+  // Check if user has paid for the article when modal opens or selectedArticle changes
+  useEffect(() => {
+    const checkPaidStatus = async () => {
+      if (
+        account &&
+        selectedArticle &&
+        !isOwnProfile &&
+        Number(selectedArticle.price) > 0
+      ) {
+        const paid = await hasUserPaidForArticle();
+        setHasPaid(!!paid);
+      } else {
+        setHasPaid(false);
+      }
+    };
+    checkPaidStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedArticle, account]);
+
+  // Update paid status after successful payment
+  useEffect(() => {
+    if (paymentSuccess) setHasPaid(true);
+  }, [paymentSuccess]);
+
+  const handleWithdrawEarnings = async () => {
     if (!account) {
       setError("Please connect your wallet first");
       return;
     }
-
     if (!earningsData || earningsData === BigInt(0)) {
       setError("No earnings to withdraw");
       return;
     }
-
     try {
       setError(null);
-      const transaction = prepareContractCall({
+      setIsWithdrawing(true);
+      const transaction = await prepareContractCall({
         contract,
         method: "function withdrawEarnings()",
         params: [],
       });
-
-      sendTransactionMutation(transaction, {
-        onSuccess: () => {
-          setWithdrawSuccess(true);
-        },
-        onError: (err) => {
-          console.error("Error withdrawing earnings:", err);
-          setError("Failed to withdraw earnings. Please try again.");
-        },
+      await sendTransaction({
+        transaction,
+        account,
       });
+      setWithdrawSuccess(true);
+      setTimeout(() => setWithdrawSuccess(false), 2500);
     } catch (error) {
-      console.error("Error preparing withdrawal:", error);
-      setError("Failed to prepare withdrawal. Please try again.");
+      setError("Failed to withdraw earnings. Please try again.");
+    } finally {
+      setIsWithdrawing(false);
     }
   };
 
@@ -112,6 +176,7 @@ export default function ProfilePage({
     setSelectedArticle(null);
     setPaymentSuccess(false);
     setPaymentError(null);
+    setHasPaid(false);
   };
 
   const handlePayForAccess = async () => {
@@ -119,37 +184,61 @@ export default function ProfilePage({
       setPaymentError("Please connect your wallet first");
       return;
     }
-
     try {
       setIsPaying(true);
       setPaymentError(null);
-
-      const transaction = prepareContractCall({
+      const transaction = await prepareContractCall({
         contract,
         method: "function viewArticle(address author, uint256 id) payable",
         params: [profileAddress, selectedArticle.id],
         value: selectedArticle.price,
       });
-
-      await sendTransaction(transaction, account);
-
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setPaymentSuccess(true);
-      setIsPaying(false);
+      const { transactionHash } = await sendTransaction({
+        transaction,
+        account,
+      });
+      if (!transactionHash) {
+        setPaymentError("Transaction failed. Please try again.");
+      } else {
+        setPaymentSuccess(true);
+        setHasPaid(true);
+        // Move this article to boughtArticles
+        setBoughtArticles((prev) => [...prev, selectedArticle]);
+        setNotBoughtArticles((prev) =>
+          prev.filter((a) => a.id !== selectedArticle.id)
+        );
+      }
     } catch (error) {
-      console.error("Error paying for article:", error);
       setPaymentError("Transaction failed. Please try again.");
+    } finally {
       setIsPaying(false);
     }
   };
 
-  // Format earnings for display
+  const hasUserPaidForArticle = async () => {
+    if (!account || !selectedArticle) return false;
+    try {
+      const data = await readContract({
+        contract,
+        method:
+          "function hasUserPaidForArticle(address author, uint256 id, address reader) view returns (bool)",
+        params: [params.address, selectedArticle.id, account.address],
+      });
+      return !!data;
+    } catch {
+      return false;
+    }
+  };
+
   const formattedEarnings = earningsData
-    ? `${Number(earningsData) / 1000000000000000000} ETH`
+    ? `${Number(earningsData) / 1e18} ETH`
     : "0 ETH";
 
-  // Loading state
-  if (isLoadingArticles || (isOwnProfile && isLoadingEarnings)) {
+  if (
+    isLoadingArticles ||
+    (isOwnProfile && isLoadingEarnings) ||
+    checkingPaid
+  ) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white">
         <Header />
@@ -171,8 +260,6 @@ export default function ProfilePage({
             <h1 className="text-3xl font-bold mb-4">
               {isOwnProfile ? "My Profile" : `${shortenedAddress}'s Profile`}
             </h1>
-
-            {/* Author's earnings (only visible to the profile owner) */}
             {isOwnProfile && (
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
@@ -189,7 +276,6 @@ export default function ProfilePage({
                       </p>
                     )}
                   </div>
-
                   <button
                     onClick={handleWithdrawEarnings}
                     disabled={
@@ -208,7 +294,6 @@ export default function ProfilePage({
                     {isWithdrawing ? "Processing..." : "Withdraw Earnings"}
                   </button>
                 </div>
-
                 {error && (
                   <div className="mt-4 bg-red-900/30 border border-red-800 text-red-200 p-3 rounded-md">
                     {error}
@@ -217,78 +302,78 @@ export default function ProfilePage({
               </div>
             )}
           </header>
-
           <section>
             <h2 className="text-2xl font-bold mb-6">
               {isOwnProfile ? "My Articles" : `${shortenedAddress}'s Articles`}
             </h2>
-
-            {userArticles && userArticles.length > 0 ? (
-              <div className="grid grid-cols-1 gap-6">
-                {userArticles.map((article, index) => (
-                  <div
-                    key={index}
-                    className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 hover:border-zinc-700 transition-colors"
-                  >
-                    <div className="mb-4">
-                      <h3
-                        onClick={() => handleOpenArticle(article)}
-                        className="text-2xl font-bold mb-2 hover:text-blue-400 cursor-pointer"
-                      >
-                        {article.title}
-                      </h3>
-                      <div className="flex items-center gap-3 text-sm text-zinc-400">
-                        <span>{formatDate(Number(article.timestamp))}</span>
-                        <div className="w-1 h-1 rounded-full bg-zinc-700"></div>
-                        <span className="bg-blue-900 text-blue-300 px-2 py-1 rounded-sm text-xs">
-                          {Number(article.price) === 0
-                            ? "Free"
-                            : `${
-                                Number(article.price) / 1000000000000000000
-                              } ETH`}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="prose prose-invert max-w-none mb-4">
-                      <div className="whitespace-pre-line mb-4 line-clamp-4">
-                        {article.previewContent}
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center mt-4">
-                      <div className="text-xs text-zinc-500">
-                        {isOwnProfile
-                          ? "This is your article"
-                          : `Article by ${shortenedAddress}`}
-                      </div>
-                      <button
-                        onClick={() => handleOpenArticle(article)}
-                        className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
-                      >
-                        {isOwnProfile
-                          ? "View full article"
-                          : Number(article.price) > 0
-                          ? "Pay to read more"
-                          : "Read more"}
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+            {/* Not Bought Articles */}
+            {notBoughtArticles && notBoughtArticles.length > 0 ? (
+              <div>
+                <div className="mb-3 text-lg font-semibold text-zinc-300">
+                  Articles Not Bought
+                </div>
+                <div className="grid grid-cols-1 gap-6">
+                  {notBoughtArticles.map((article: any) => (
+                    <div
+                      key={article.id}
+                      className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 hover:border-zinc-700 transition-colors"
+                    >
+                      <div className="mb-4">
+                        <h3
+                          onClick={() => handleOpenArticle(article)}
+                          className="text-2xl font-bold mb-2 hover:text-blue-400 cursor-pointer"
                         >
-                          <path d="M5 12h14"></path>
-                          <path d="m12 5 7 7-7 7"></path>
-                        </svg>
-                      </button>
+                          {article.title}
+                        </h3>
+                        <div className="flex items-center gap-3 text-sm text-zinc-400">
+                          <span>{formatDate(Number(article.timestamp))}</span>
+                          <div className="w-1 h-1 rounded-full bg-zinc-700"></div>
+                          <span className="bg-blue-900 text-blue-300 px-2 py-1 rounded-sm text-xs">
+                            {Number(article.price) === 0
+                              ? "Free"
+                              : `${Number(article.price) / 1e18} ETH`}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="prose prose-invert max-w-none mb-4">
+                        <div className="whitespace-pre-line mb-4 line-clamp-4">
+                          {article.previewContent}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center mt-4">
+                        <div className="text-xs text-zinc-500">
+                          {isOwnProfile
+                            ? "This is your article"
+                            : `Article by ${shortenedAddress}`}
+                        </div>
+                        <button
+                          onClick={() => handleOpenArticle(article)}
+                          className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
+                        >
+                          {isOwnProfile
+                            ? "View full article"
+                            : Number(article.price) > 0
+                            ? "Pay to read more"
+                            : "Read more"}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M5 12h14"></path>
+                            <path d="m12 5 7 7-7 7"></path>
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-8 text-center">
@@ -308,10 +393,76 @@ export default function ProfilePage({
                 )}
               </div>
             )}
+
+            {/* Bought Articles Section */}
+            {boughtArticles && boughtArticles.length > 0 && (
+              <div className="mt-12">
+                <div className="mb-3 text-lg font-semibold text-green-400">
+                  Bought Articles
+                </div>
+                <div className="grid grid-cols-1 gap-6">
+                  {boughtArticles.map((article: any) => (
+                    <div
+                      key={article.id}
+                      className="bg-zinc-900 border border-green-800 rounded-lg p-6 hover:border-green-700 transition-colors"
+                    >
+                      <div className="mb-4">
+                        <h3
+                          onClick={() => handleOpenArticle(article)}
+                          className="text-2xl font-bold mb-2 hover:text-green-400 cursor-pointer"
+                        >
+                          {article.title}
+                        </h3>
+                        <div className="flex items-center gap-3 text-sm text-zinc-400">
+                          <span>{formatDate(Number(article.timestamp))}</span>
+                          <div className="w-1 h-1 rounded-full bg-zinc-700"></div>
+                          <span className="bg-green-900 text-green-300 px-2 py-1 rounded-sm text-xs">
+                            {Number(article.price) === 0
+                              ? "Free"
+                              : `${Number(article.price) / 1e18} ETH`}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="prose prose-invert max-w-none mb-4">
+                        <div className="whitespace-pre-line mb-4 line-clamp-4">
+                          {article.previewContent}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center mt-4">
+                        <div className="text-xs text-zinc-500">
+                          {isOwnProfile
+                            ? "This is your article"
+                            : `Article by ${shortenedAddress}`}
+                        </div>
+                        <button
+                          onClick={() => handleOpenArticle(article)}
+                          className="inline-flex items-center gap-1 text-green-400 hover:text-green-300"
+                        >
+                          View full article
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M5 12h14"></path>
+                            <path d="m12 5 7 7-7 7"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         </div>
       </main>
-
       {/* Article Modal */}
       {isModalOpen && selectedArticle && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
@@ -338,7 +489,6 @@ export default function ProfilePage({
                 </svg>
               </button>
             </div>
-
             <div className="p-6">
               <div className="flex items-center gap-3 text-sm text-zinc-400 mb-6">
                 <span>By: {isOwnProfile ? "You" : shortenedAddress}</span>
@@ -348,32 +498,26 @@ export default function ProfilePage({
                 <span className="bg-blue-900 text-blue-300 px-2 py-1 rounded-sm text-xs">
                   {Number(selectedArticle.price) === 0
                     ? "Free"
-                    : `${
-                        Number(selectedArticle.price) / 1000000000000000000
-                      } ETH`}
+                    : `${Number(selectedArticle.price) / 1e18} ETH`}
                 </span>
               </div>
-
               <div className="prose prose-invert max-w-none whitespace-pre-line">
                 {isOwnProfile ||
                 Number(selectedArticle.price) === 0 ||
-                paymentSuccess ? (
+                hasPaid ? (
                   <div>{selectedArticle.fullContent}</div>
                 ) : (
                   <div>
                     <div className="mb-6">{selectedArticle.previewContent}</div>
-
                     <div className="border-t border-zinc-800 pt-6 mt-6">
                       <div className="bg-zinc-800 p-6 rounded-lg">
                         <h3 className="text-xl font-semibold mb-3">
                           Premium Content
                         </h3>
                         <p className="text-zinc-400 mb-4">
-                          Pay{" "}
-                          {Number(selectedArticle.price) / 1000000000000000000}{" "}
-                          ETH to read the full article
+                          Pay {Number(selectedArticle.price) / 1e18} ETH to read
+                          the full article
                         </p>
-
                         {paymentSuccess ? (
                           <div className="p-4 bg-green-900/30 border border-green-800 text-green-200 rounded-md mb-4">
                             Payment successful! You now have access to the full
@@ -392,12 +536,10 @@ export default function ProfilePage({
                             {isPaying
                               ? "Processing Payment..."
                               : `Pay ${
-                                  Number(selectedArticle.price) /
-                                  1000000000000000000
+                                  Number(selectedArticle.price) / 1e18
                                 } ETH for Full Access`}
                           </button>
                         )}
-
                         {paymentError && (
                           <div className="mt-4 bg-red-900/30 border border-red-800 text-red-200 p-3 rounded-md">
                             {paymentError}

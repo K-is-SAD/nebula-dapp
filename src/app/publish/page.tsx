@@ -4,10 +4,9 @@ import { useState } from "react";
 import { useActiveAccount } from "thirdweb/react";
 import { useRouter } from "next/navigation";
 import Header from "@/app/components/Header";
-import { publishArticle, getBlogContract } from "@/app/contractUtils";
+import { getBlogContract } from "@/app/contractUtils";
 import Link from "next/link";
 import { prepareContractCall, sendTransaction } from "thirdweb";
-import { title } from "process";
 
 export default function PublishPage() {
   const router = useRouter();
@@ -61,16 +60,6 @@ export default function PublishPage() {
       setIsSubmitting(true);
       setError(null);
 
-      // Simulate publishing an article
-      // In production, replace with the actual contract call
-      // await publishArticle({
-      //   title: formData.title,
-      //   previewContent: formData.previewContent,
-      //   fullContent: formData.fullContent,
-      //   price: formData.price,
-      //   account: account.address,
-      // });
-
       const contract = getBlogContract();
       const { title, previewContent, fullContent } = formData;
 
@@ -100,8 +89,6 @@ export default function PublishPage() {
 
       setSuccess(true);
 
-      // In production, you might want to redirect to the newly created article
-      const articleId = 0; // Get this from the transaction response
       router.push(`/profile/${account?.address}`);
 
     } catch (error) {
@@ -121,7 +108,7 @@ export default function PublishPage() {
               Article Published Successfully!
             </h2>
             <p className="text-zinc-300 mb-6">
-              Your article has been published to the blockchain and is now
+              Your article has been published and is now
               available for readers.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
