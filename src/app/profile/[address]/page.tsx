@@ -586,10 +586,10 @@ export default function ProfilePage({
             <div className="sticky top-0 bg-white dark:bg-zinc-900 z-10 p-6 pb-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
               <h2 className="text-2xl font-bold text-zinc-800 dark:text-zinc-100">
                 <div className="flex gap-2 mb-2">
-                  <span className="text-base text-blue-600 dark:text-blue-400">
+                  <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow">
                     {parseTitle(selectedArticle.title).tag1}
                   </span>
-                  <span className="text-base text-purple-600 dark:text-purple-400">
+                  <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow">
                     {parseTitle(selectedArticle.title).tag2}
                   </span>
                 </div>
