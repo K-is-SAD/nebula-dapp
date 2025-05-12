@@ -242,7 +242,6 @@ export default function PublishPage() {
                       required
                     />
                   </div>
-
                   <div>
                     <label
                       htmlFor="previewContent"
