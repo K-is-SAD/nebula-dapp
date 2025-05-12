@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArticlePreview, formatDate } from "../contractUtils";
+import { ArticlePreview, formatDate } from "../app/contractUtils";
 import { useActiveAccount } from "thirdweb/react";
 
 export default function ArticleCard({ article }: { article: ArticlePreview }) {
