@@ -20,6 +20,16 @@ const contract = getContract({
   address: process.env.NEXT_PUBLIC_THIRDWEB_CONTRACT_ADDRESS!,
 });
 
+// Helper to parse the title into tags and actual title
+function parseTitle(title: string) {
+  const parts = title.split("||").map((p) => p.trim());
+  return {
+    tag1: parts[0] || "",
+    tag2: parts[1] || "",
+    actualTitle: parts.slice(2).join(" ") || title,
+  };
+}
+
 export default function ProfilePage({
   params,
 }: {
@@ -346,7 +356,7 @@ export default function ProfilePage({
               )}
             </div>
           </header>
-          <AddressSearch/>
+          <AddressSearch />
           <section>
             <h2 className="text-2xl font-bold mb-6 text-zinc-800 dark:text-zinc-200">
               {isOwnProfile ? "My Articles" : `${shortenedAddress}'s Articles`}
@@ -359,62 +369,75 @@ export default function ProfilePage({
                   Available Articles
                 </div>
                 <div className="grid md:grid-cols-2 grid-cols-1 gap-6">
-                  {notBoughtArticles.map((article: any) => (
-                    <div
-                      key={article.id}
-                      className="rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500 transition-all duration-300 shadow-md hover:shadow-xl p-6 flex flex-col gap-3 group relative overflow-hidden"
-                    >
-                      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow">
-                          {Number(article.price) === 0 ? "Free" : "Premium"}
-                        </span>
-                        <span className="text-xs text-slate-500 dark:text-zinc-400">
-                          {formatDate(Number(article.timestamp))}
-                        </span>
-                      </div>
-
-                      <h3
-                        onClick={() => handleOpenArticle(article)}
-                        className="text-xl font-bold text-slate-800 dark:text-white group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors duration-300 cursor-pointer"
+                  {notBoughtArticles.map((article: any) => {
+                    const { tag1, tag2, actualTitle } = parseTitle(
+                      article.title
+                    );
+                    return (
+                      <div
+                        key={article.id}
+                        className="rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500 transition-all duration-300 shadow-md hover:shadow-xl p-6 flex flex-col gap-3 group relative overflow-hidden"
                       >
-                        {article.title}
-                      </h3>
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
 
-                      <p className="text-slate-600 dark:text-zinc-300 line-clamp-3">
-                        {article.previewContent}
-                      </p>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow">
+                            {Number(article.price) === 0 ? "Free" : "Premium"}
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-zinc-400">
+                            {formatDate(Number(article.timestamp))}
+                          </span>
+                        </div>
 
-                      <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100 dark:border-slate-800">
-                        <span
-                          className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                            Number(article.price) === 0
-                              ? "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300"
-                              : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
-                          }`}
+                        <h3
+                          onClick={() => handleOpenArticle(article)}
+                          className="text-xl font-bold text-slate-800 dark:text-white group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors duration-300 cursor-pointer"
                         >
-                          {Number(article.price) === 0
-                            ? "Free"
-                            : `${Number(article.price) / 1e18} ETH`}
-                        </span>
-                        <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
-                          {isOwnProfile ? "You" : `${shortenedAddress}`}
-                        </span>
-                      </div>
+                          <div className="flex gap-2 mb-1">
+                            <span className="text-sm text-blue-600 dark:text-blue-400">
+                              {tag1}
+                            </span>
+                            <span className="text-sm text-purple-600 dark:text-purple-400">
+                              {tag2}
+                            </span>
+                          </div>
+                          {actualTitle}
+                        </h3>
 
-                      <button
-                        onClick={() => handleOpenArticle(article)}
-                        className="mt-4 w-full py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-200"
-                      >
-                        {isOwnProfile
-                          ? "View article"
-                          : Number(article.price) > 0
-                          ? "Pay to read"
-                          : "Read more"}
-                      </button>
-                    </div>
-                  ))}
+                        <p className="text-slate-600 dark:text-zinc-300 line-clamp-3">
+                          {article.previewContent}
+                        </p>
+
+                        <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100 dark:border-slate-800">
+                          <span
+                            className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                              Number(article.price) === 0
+                                ? "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300"
+                                : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
+                            }`}
+                          >
+                            {Number(article.price) === 0
+                              ? "Free"
+                              : `${Number(article.price) / 1e18} ETH`}
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
+                            {isOwnProfile ? "You" : `${shortenedAddress}`}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={() => handleOpenArticle(article)}
+                          className="mt-4 w-full py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-200"
+                        >
+                          {isOwnProfile
+                            ? "View article"
+                            : Number(article.price) > 0
+                            ? "Pay to read"
+                            : "Read more"}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
@@ -475,65 +498,80 @@ export default function ProfilePage({
                   Your Purchased Articles
                 </div>
                 <div className="grid grid-cols-1 gap-6">
-                  {boughtArticles.map((article: any) => (
-                    <div
-                      key={article.id}
-                      className="group bg-white dark:bg-zinc-900 border border-green-200 dark:border-green-800/50 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
-                    >
-                      <div className="p-6">
-                        <div className="mb-4">
-                          <h3
-                            onClick={() => handleOpenArticle(article)}
-                            className="text-xl md:text-2xl font-bold mb-2 text-zinc-800 dark:text-zinc-100 group-hover:text-green-600 dark:group-hover:text-green-400 cursor-pointer transition-colors"
-                          >
-                            {article.title}
-                          </h3>
-                          <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
-                            <span>{formatDate(Number(article.timestamp))}</span>
-                            <div className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
-                            <span className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 px-2 py-1 rounded-md text-xs font-medium">
-                              {Number(article.price) === 0
-                                ? "Free"
-                                : `${Number(article.price) / 1e18} ETH`}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="prose prose-zinc dark:prose-invert max-w-none mb-4">
-                          <div className="whitespace-pre-line line-clamp-3">
-                            {article.previewContent}
-                          </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-6">
-                          <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                            {isOwnProfile
-                              ? "Your article"
-                              : `By ${shortenedAddress}`}
-                          </div>
-                          <button
-                            onClick={() => handleOpenArticle(article)}
-                            className="inline-flex items-center gap-1.5 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 font-medium transition-colors"
-                          >
-                            View article
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="inline"
+                  {boughtArticles.map((article: any) => {
+                    const { tag1, tag2, actualTitle } = parseTitle(
+                      article.title
+                    );
+                    return (
+                      <div
+                        key={article.id}
+                        className="group bg-white dark:bg-zinc-900 border border-green-200 dark:border-green-800/50 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                      >
+                        <div className="p-6">
+                          <div className="mb-4">
+                            <h3
+                              onClick={() => handleOpenArticle(article)}
+                              className="text-xl md:text-2xl font-bold mb-2 text-zinc-800 dark:text-zinc-100 group-hover:text-green-600 dark:group-hover:text-green-400 cursor-pointer transition-colors"
                             >
-                              <path d="M5 12h14"></path>
-                              <path d="m12 5 7 7-7 7"></path>
-                            </svg>
-                          </button>
+                              <div className="flex gap-2 mb-1">
+                                <span className="text-sm text-blue-600 dark:text-blue-400">
+                                  {tag1}
+                                </span>
+                                <span className="text-sm text-purple-600 dark:text-purple-400">
+                                  {tag2}
+                                </span>
+                              </div>
+                              {actualTitle}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
+                              <span>
+                                {formatDate(Number(article.timestamp))}
+                              </span>
+                              <div className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
+                              <span className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 px-2 py-1 rounded-md text-xs font-medium">
+                                {Number(article.price) === 0
+                                  ? "Free"
+                                  : `${Number(article.price) / 1e18} ETH`}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="prose prose-zinc dark:prose-invert max-w-none mb-4">
+                            <div className="whitespace-pre-line line-clamp-3">
+                              {article.previewContent}
+                            </div>
+                          </div>
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-6">
+                            <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                              {isOwnProfile
+                                ? "Your article"
+                                : `By ${shortenedAddress}`}
+                            </div>
+                            <button
+                              onClick={() => handleOpenArticle(article)}
+                              className="inline-flex items-center gap-1.5 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 font-medium transition-colors"
+                            >
+                              View article
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="inline"
+                              >
+                                <path d="M5 12h14"></path>
+                                <path d="m12 5 7 7-7 7"></path>
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -547,7 +585,15 @@ export default function ProfilePage({
           <div className="bg-white dark:bg-zinc-900 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-zinc-200 dark:border-zinc-800">
             <div className="sticky top-0 bg-white dark:bg-zinc-900 z-10 p-6 pb-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
               <h2 className="text-2xl font-bold text-zinc-800 dark:text-zinc-100">
-                {selectedArticle.title}
+                <div className="flex gap-2 mb-2">
+                  <span className="text-base text-blue-600 dark:text-blue-400">
+                    {parseTitle(selectedArticle.title).tag1}
+                  </span>
+                  <span className="text-base text-purple-600 dark:text-purple-400">
+                    {parseTitle(selectedArticle.title).tag2}
+                  </span>
+                </div>
+                {parseTitle(selectedArticle.title).actualTitle}
               </h2>
               <button
                 onClick={handleCloseModal}
