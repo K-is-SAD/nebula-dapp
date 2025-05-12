@@ -1,8 +1,9 @@
 "use client";
 
-import { useActiveAccount } from "thirdweb/react";
-import Header from "./components/Header";
+import { ConnectButton, useActiveAccount } from "thirdweb/react";
+import { client } from "../app/client";
 import Link from "next/link";
+import FAQS from "@/components/faq";
 
 const demoArticles = [
   {
@@ -71,85 +72,116 @@ export default function Home() {
   const account = useActiveAccount();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#18192a] via-[#181926] to-[#1a1b2f] text-white font-sans">
-      <Header />
-
-      <main className="container mx-auto px-4 py-10">
-        {/* Hero Section */}
-        <section className="mb-14 text-center">
-          <h1 className="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent drop-shadow-lg mb-4">
-            Nebula Blog Platform
-          </h1>
-          <p className="text-xl text-zinc-300 max-w-2xl mx-auto mb-8">
+    <div className="absolute min-h-screen bg-slate-50 dark:bg-gradient-to-br dark:from-[#18192a] dark:via-[#181926] dark:to-[#1a1b2f] text-slate-800 dark:text-white font-sans">
+      <main className="relative top-28 container mx-auto px-4 py-12">
+        <div className="text-center max-w-3xl mx-auto mb-12">
+         <h1 className="text-5xl md:text-6xl font-extrabold mb-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+  Nebula Blog Platform
+</h1>
+          <p className="text-xl text-slate-600 dark:text-zinc-300 mb-6">
             Explore the future of blockchain, DeFi, and crypto culture with
             visually stunning demo articles.
           </p>
+          
           {account ? (
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-6">
               <Link
                 href="/publish"
-                className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-200"
+                className="bg-gradient-to-r from-blue-600 to-purple-700 dark:from-blue-500 dark:to-purple-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl"
               >
-                <span className="drop-shadow">Publish Your Article</span>
+                <span className="drop-shadow flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                  </svg>
+                  Publish Your Article
+                </span>
               </Link>
             </div>
           ) : (
-            <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-6 max-w-lg mx-auto text-center mb-8 shadow-lg backdrop-blur-md">
-              <h2 className="text-xl font-semibold mb-2 text-blue-400">
+            <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl p-6 max-w-lg mx-auto text-center mb-6 shadow-lg backdrop-blur-md">
+              <h2 className="text-xl font-semibold mb-2 text-blue-600 dark:text-blue-400">
                 Connect Your Wallet
               </h2>
-              <p className="text-zinc-400 mb-2">
+              <p className="text-slate-600 dark:text-zinc-400 mb-4">
                 Connect your wallet to publish articles or access premium
                 content.
               </p>
+                          <ConnectButton
+                            client={client}
+                            appMetadata={{
+                              name: "Web3 Blog",
+                              url: "https://web3blog.example.com",
+                            }}
+                          />
             </div>
           )}
-        </section>
+        </div>
 
-        {/* Demo Articles Section */}
-        <section>
-          <h2 className="text-2xl font-bold mb-8 text-gradient bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent text-center">
-            Demo Articles
+
+        <section className="py-10">
+          <h2 className="text-2xl font-bold mb-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent text-center">
+            Featured Articles
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {demoArticles.map((article) => (
               <div
                 key={article.id}
-                className="rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-purple-500 transition-all shadow-lg p-6 flex flex-col gap-3 group"
+                className="rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500 transition-all duration-300 shadow-md hover:shadow-xl p-6 flex flex-col gap-3 group relative overflow-hidden"
               >
-                <div className="flex items-center gap-2 mb-1">
+        
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                
+                <div className="flex items-center gap-2">
                   <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow">
                     {article.tag}
                   </span>
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-slate-500 dark:text-zinc-400">
                     {new Date(article.timestamp * 1000).toLocaleDateString()}
                   </span>
                 </div>
-                <h3 className="text-xl font-bold group-hover:text-purple-300 transition drop-shadow mb-1">
+                
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors duration-300">
                   {article.title}
                 </h3>
-                <p className="text-zinc-300 mb-2 line-clamp-3">
+                
+                <p className="text-slate-600 dark:text-zinc-300 line-clamp-3">
                   {article.previewContent}
                 </p>
-                <div className="flex items-center justify-between mt-auto">
-                  <span className="bg-blue-900 text-blue-300 text-xs font-semibold px-3 py-1 rounded-full">
+                
+                <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <span className="bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-semibold px-3 py-1 rounded-full">
                     {Number(article.price)} ETH
                   </span>
-                  <span className="text-xs text-zinc-400 font-mono">
+                  <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono">
                     {article.author.slice(0, 6)}...{article.author.slice(-4)}
                   </span>
                 </div>
-                <div className="absolute top-3 left-3 bg-pink-600/80 text-xs text-white px-2 py-1 rounded shadow z-20 hidden">
-                  Demo
-                </div>
+                
+                <button className="mt-4 w-full py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 transition-colors duration-200">
+                  Read Article
+                </button>
               </div>
             ))}
           </div>
         </section>
       </main>
-      <footer className="mt-20 py-8 border-t border-zinc-800 text-center text-zinc-500 text-sm">
-        &copy; {new Date().getFullYear()} Nebula Blog Platform. Powered by
-        Blockchain.
+      <FAQS/>
+      <footer className="mt-16 py-6 border-t border-slate-200 dark:border-slate-800 text-center text-slate-500 dark:text-zinc-500 text-sm">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+                Nebula
+              </span>
+              <span>&copy; {new Date().getFullYear()}</span>
+            </div>
+            <div className="flex gap-6">
+              <Link href="#" className="text-slate-500 dark:text-zinc-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">About</Link>
+              <Link href="#" className="text-slate-500 dark:text-zinc-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Terms</Link>
+              <Link href="#" className="text-slate-500 dark:text-zinc-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Privacy</Link>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   );

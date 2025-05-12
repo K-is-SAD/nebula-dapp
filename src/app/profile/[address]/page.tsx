@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useActiveAccount, useReadContract } from "thirdweb/react";
-import Header from "@/app/components/Header";
 import { formatDate } from "@/app/contractUtils";
 import Link from "next/link";
 import { prepareContractCall, sendTransaction, readContract } from "thirdweb";
@@ -36,7 +35,6 @@ export default function ProfilePage({
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [hasPaid, setHasPaid] = useState(false);
 
-  // For splitting articles
   const [boughtArticles, setBoughtArticles] = useState<any[]>([]);
   const [notBoughtArticles, setNotBoughtArticles] = useState<any[]>([]);
   const [checkingPaid, setCheckingPaid] = useState(false);
@@ -62,7 +60,6 @@ export default function ProfilePage({
     params: [params.address],
   });
 
-  // Split articles into bought and not bought
   useEffect(() => {
     const checkBoughtArticles = async () => {
       if (
@@ -78,7 +75,6 @@ export default function ProfilePage({
       setCheckingPaid(true);
       const bought: any[] = [];
       const notBought: any[] = [];
-      // Check payment status for each article (paid only for paid articles)
       await Promise.all(
         userArticles.map(async (article: any) => {
           if (Number(article.price) === 0) {
@@ -107,10 +103,8 @@ export default function ProfilePage({
       setCheckingPaid(false);
     };
     checkBoughtArticles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userArticles, account, isOwnProfile]);
+  }, [userArticles, account, isOwnProfile, params.address]);
 
-  // Check if user has paid for the article when modal opens or selectedArticle changes
   useEffect(() => {
     const checkPaidStatus = async () => {
       if (
@@ -126,10 +120,8 @@ export default function ProfilePage({
       }
     };
     checkPaidStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedArticle, account]);
+  }, [selectedArticle, account, isOwnProfile]);
 
-  // Update paid status after successful payment
   useEffect(() => {
     if (paymentSuccess) setHasPaid(true);
   }, [paymentSuccess]);
@@ -202,7 +194,6 @@ export default function ProfilePage({
       } else {
         setPaymentSuccess(true);
         setHasPaid(true);
-        // Move this article to boughtArticles
         setBoughtArticles((prev) => [...prev, selectedArticle]);
         setNotBoughtArticles((prev) =>
           prev.filter((a) => a.id !== selectedArticle.id)
@@ -234,17 +225,17 @@ export default function ProfilePage({
     ? `${Number(earningsData) / 1e18} ETH`
     : "0 ETH";
 
-  if (
-    isLoadingArticles ||
-    (isOwnProfile && isLoadingEarnings) ||
-    checkingPaid
-  ) {
+  if (isLoadingArticles || (isOwnProfile && isLoadingEarnings) || checkingPaid) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-white">
-        <Header />
+      <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white">
         <main className="container mx-auto px-4 py-16">
           <div className="flex justify-center items-center h-64">
-            <p className="text-xl text-zinc-400">Loading profile...</p>
+            <div className="animate-pulse flex flex-col items-center">
+              <div className="h-12 w-12 bg-zinc-200 dark:bg-zinc-800 rounded-full mb-4"></div>
+              <p className="text-lg text-zinc-500 dark:text-zinc-400">
+                Loading profile...
+              </p>
+            </div>
           </div>
         </main>
       </div>
@@ -252,142 +243,232 @@ export default function ProfilePage({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      <Header />
-      <main className="container mx-auto px-4 py-10">
-        <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white pt-20 transition-colors duration-200">
+      <main className="container mx-auto px-4 sm:px-6 py-8 md:py-12">
+        <div className="max-w-5xl mx-auto">
           <header className="mb-12">
-            <h1 className="text-3xl font-bold mb-4">
-              {isOwnProfile ? "My Profile" : `${shortenedAddress}'s Profile`}
-            </h1>
-            {isOwnProfile && (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                  <div>
-                    <h2 className="text-xl font-semibold mb-2">
-                      Author Earnings
-                    </h2>
-                    <p className="text-2xl font-bold text-blue-400 mb-2">
-                      {formattedEarnings}
-                    </p>
-                    {withdrawSuccess && (
-                      <p className="text-green-500 text-sm">
-                        Earnings successfully withdrawn!
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={handleWithdrawEarnings}
-                    disabled={
-                      isWithdrawing ||
-                      !earningsData ||
-                      earningsData === BigInt(0)
-                    }
-                    className={`mt-4 md:mt-0 py-2 px-6 rounded-md font-medium transition-colors ${
-                      isWithdrawing ||
-                      !earningsData ||
-                      earningsData === BigInt(0)
-                        ? "bg-zinc-700 text-zinc-300 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-700 text-white"
-                    }`}
-                  >
-                    {isWithdrawing ? "Processing..." : "Withdraw Earnings"}
-                  </button>
-                </div>
-                {error && (
-                  <div className="mt-4 bg-red-900/30 border border-red-800 text-red-200 p-3 rounded-md">
-                    {error}
-                  </div>
-                )}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  {isOwnProfile ? "My Profile" : `${shortenedAddress}'s Profile`}
+                </h1>
+                <p className="text-zinc-500 dark:text-zinc-400 mt-2">
+                  {isOwnProfile
+                    ? "Manage your published articles and earnings"
+                    : `Viewing articles by ${shortenedAddress}`}
+                </p>
               </div>
-            )}
+              
+              {isOwnProfile && (
+                <div className="w-full md:w-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-6">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                        Author Earnings
+                      </h2>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {formattedEarnings}
+                      </p>
+                      {withdrawSuccess && (
+                        <p className="text-green-600 dark:text-green-400 text-sm mt-1">
+                          Earnings successfully withdrawn!
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleWithdrawEarnings}
+                      disabled={
+                        isWithdrawing ||
+                        !earningsData ||
+                        earningsData === BigInt(0)
+                      }
+                      className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+                        isWithdrawing ||
+                        !earningsData ||
+                        earningsData === BigInt(0)
+                          ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                          : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg"
+                      }`}
+                    >
+                      {isWithdrawing ? (
+                        <span className="flex items-center gap-2">
+                          <svg
+                            className="animate-spin h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Processing...
+                        </span>
+                      ) : (
+                        "Withdraw Earnings"
+                      )}
+                    </button>
+                  </div>
+                  {error && (
+                    <div className="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-3 rounded-md flex items-start">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 mr-2 flex-shrink-0"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span>{error}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </header>
+
           <section>
-            <h2 className="text-2xl font-bold mb-6">
+            <h2 className="text-2xl font-bold mb-6 text-zinc-800 dark:text-zinc-200">
               {isOwnProfile ? "My Articles" : `${shortenedAddress}'s Articles`}
             </h2>
+
             {/* Not Bought Articles */}
             {notBoughtArticles && notBoughtArticles.length > 0 ? (
               <div>
-                <div className="mb-3 text-lg font-semibold text-zinc-300">
-                  Articles Not Bought
+                <div className="mb-4 text-lg font-semibold text-zinc-700 dark:text-zinc-300">
+                  Available Articles
                 </div>
                 <div className="grid grid-cols-1 gap-6">
                   {notBoughtArticles.map((article: any) => (
                     <div
                       key={article.id}
-                      className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 hover:border-zinc-700 transition-colors"
+                      className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
                     >
-                      <div className="mb-4">
-                        <h3
-                          onClick={() => handleOpenArticle(article)}
-                          className="text-2xl font-bold mb-2 hover:text-blue-400 cursor-pointer"
-                        >
-                          {article.title}
-                        </h3>
-                        <div className="flex items-center gap-3 text-sm text-zinc-400">
-                          <span>{formatDate(Number(article.timestamp))}</span>
-                          <div className="w-1 h-1 rounded-full bg-zinc-700"></div>
-                          <span className="bg-blue-900 text-blue-300 px-2 py-1 rounded-sm text-xs">
-                            {Number(article.price) === 0
-                              ? "Free"
-                              : `${Number(article.price) / 1e18} ETH`}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="prose prose-invert max-w-none mb-4">
-                        <div className="whitespace-pre-line mb-4 line-clamp-4">
-                          {article.previewContent}
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center mt-4">
-                        <div className="text-xs text-zinc-500">
-                          {isOwnProfile
-                            ? "This is your article"
-                            : `Article by ${shortenedAddress}`}
-                        </div>
-                        <button
-                          onClick={() => handleOpenArticle(article)}
-                          className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
-                        >
-                          {isOwnProfile
-                            ? "View full article"
-                            : Number(article.price) > 0
-                            ? "Pay to read more"
-                            : "Read more"}
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                      <div className="p-6">
+                        <div className="mb-4">
+                          <h3
+                            onClick={() => handleOpenArticle(article)}
+                            className="text-xl md:text-2xl font-bold mb-2 text-zinc-800 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 cursor-pointer transition-colors"
                           >
-                            <path d="M5 12h14"></path>
-                            <path d="m12 5 7 7-7 7"></path>
-                          </svg>
-                        </button>
+                            {article.title}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
+                            <span>{formatDate(Number(article.timestamp))}</span>
+                            <div className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
+                            <span
+                              className={`px-2 py-1 rounded-md text-xs font-medium ${
+                                Number(article.price) === 0
+                                  ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300"
+                                  : "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300"
+                              }`}
+                            >
+                              {Number(article.price) === 0
+                                ? "Free"
+                                : `${Number(article.price) / 1e18} ETH`}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="prose prose-zinc dark:prose-invert max-w-none mb-4">
+                          <div className="whitespace-pre-line line-clamp-3">
+                            {article.previewContent}
+                          </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-6">
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {isOwnProfile
+                              ? "Your article"
+                              : `By ${shortenedAddress}`}
+                          </div>
+                          <button
+                            onClick={() => handleOpenArticle(article)}
+                            className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors"
+                          >
+                            {isOwnProfile
+                              ? "View article"
+                              : Number(article.price) > 0
+                              ? "Pay to read"
+                              : "Read more"}
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="inline"
+                            >
+                              <path d="M5 12h14"></path>
+                              <path d="m12 5 7 7-7 7"></path>
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-8 text-center">
-                <h3 className="text-xl font-semibold mb-2">No articles yet</h3>
-                <p className="text-zinc-400 mb-4">
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-8 text-center">
+                <div className="mx-auto w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-8 w-8 text-zinc-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
+                  No articles yet
+                </h3>
+                <p className="text-zinc-500 dark:text-zinc-400 mb-6 max-w-md mx-auto">
                   {isOwnProfile
-                    ? "You haven't published any articles yet."
+                    ? "You haven't published any articles yet. Start sharing your knowledge with the community!"
                     : "This user hasn't published any articles yet."}
                 </p>
                 {isOwnProfile && (
                   <Link
                     href="/publish"
-                    className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-sm hover:shadow-md transition-all duration-200"
                   >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      />
+                    </svg>
                     Publish Your First Article
                   </Link>
                 )}
@@ -397,63 +478,66 @@ export default function ProfilePage({
             {/* Bought Articles Section */}
             {boughtArticles && boughtArticles.length > 0 && (
               <div className="mt-12">
-                <div className="mb-3 text-lg font-semibold text-green-400">
-                  Bought Articles
+                <div className="mb-4 text-lg font-semibold text-green-600 dark:text-green-400">
+                  Your Purchased Articles
                 </div>
                 <div className="grid grid-cols-1 gap-6">
                   {boughtArticles.map((article: any) => (
                     <div
                       key={article.id}
-                      className="bg-zinc-900 border border-green-800 rounded-lg p-6 hover:border-green-700 transition-colors"
+                      className="group bg-white dark:bg-zinc-900 border border-green-200 dark:border-green-800/50 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
                     >
-                      <div className="mb-4">
-                        <h3
-                          onClick={() => handleOpenArticle(article)}
-                          className="text-2xl font-bold mb-2 hover:text-green-400 cursor-pointer"
-                        >
-                          {article.title}
-                        </h3>
-                        <div className="flex items-center gap-3 text-sm text-zinc-400">
-                          <span>{formatDate(Number(article.timestamp))}</span>
-                          <div className="w-1 h-1 rounded-full bg-zinc-700"></div>
-                          <span className="bg-green-900 text-green-300 px-2 py-1 rounded-sm text-xs">
-                            {Number(article.price) === 0
-                              ? "Free"
-                              : `${Number(article.price) / 1e18} ETH`}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="prose prose-invert max-w-none mb-4">
-                        <div className="whitespace-pre-line mb-4 line-clamp-4">
-                          {article.previewContent}
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center mt-4">
-                        <div className="text-xs text-zinc-500">
-                          {isOwnProfile
-                            ? "This is your article"
-                            : `Article by ${shortenedAddress}`}
-                        </div>
-                        <button
-                          onClick={() => handleOpenArticle(article)}
-                          className="inline-flex items-center gap-1 text-green-400 hover:text-green-300"
-                        >
-                          View full article
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                      <div className="p-6">
+                        <div className="mb-4">
+                          <h3
+                            onClick={() => handleOpenArticle(article)}
+                            className="text-xl md:text-2xl font-bold mb-2 text-zinc-800 dark:text-zinc-100 group-hover:text-green-600 dark:group-hover:text-green-400 cursor-pointer transition-colors"
                           >
-                            <path d="M5 12h14"></path>
-                            <path d="m12 5 7 7-7 7"></path>
-                          </svg>
-                        </button>
+                            {article.title}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
+                            <span>{formatDate(Number(article.timestamp))}</span>
+                            <div className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
+                            <span className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 px-2 py-1 rounded-md text-xs font-medium">
+                              {Number(article.price) === 0
+                                ? "Free"
+                                : `${Number(article.price) / 1e18} ETH`}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="prose prose-zinc dark:prose-invert max-w-none mb-4">
+                          <div className="whitespace-pre-line line-clamp-3">
+                            {article.previewContent}
+                          </div>
+                        </div>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-6">
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {isOwnProfile
+                              ? "Your article"
+                              : `By ${shortenedAddress}`}
+                          </div>
+                          <button
+                            onClick={() => handleOpenArticle(article)}
+                            className="inline-flex items-center gap-1.5 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 font-medium transition-colors"
+                          >
+                            View article
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="inline"
+                            >
+                              <path d="M5 12h14"></path>
+                              <path d="m12 5 7 7-7 7"></path>
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -463,15 +547,18 @@ export default function ProfilePage({
           </section>
         </div>
       </main>
+
       {/* Article Modal */}
       {isModalOpen && selectedArticle && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-900 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-zinc-900 z-10 p-6 pb-4 border-b border-zinc-800 flex justify-between items-center">
-              <h2 className="text-2xl font-bold">{selectedArticle.title}</h2>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-zinc-200 dark:border-zinc-800">
+            <div className="sticky top-0 bg-white dark:bg-zinc-900 z-10 p-6 pb-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-zinc-800 dark:text-zinc-100">
+                {selectedArticle.title}
+              </h2>
               <button
                 onClick={handleCloseModal}
-                className="text-zinc-400 hover:text-white"
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors p-1 rounded-full"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -483,25 +570,31 @@ export default function ProfilePage({
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth="2"
                     d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
               </button>
             </div>
             <div className="p-6">
-              <div className="flex items-center gap-3 text-sm text-zinc-400 mb-6">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400 mb-6">
                 <span>By: {isOwnProfile ? "You" : shortenedAddress}</span>
-                <div className="w-1 h-1 rounded-full bg-zinc-700"></div>
+                <div className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
                 <span>{formatDate(Number(selectedArticle.timestamp))}</span>
-                <div className="w-1 h-1 rounded-full bg-zinc-700"></div>
-                <span className="bg-blue-900 text-blue-300 px-2 py-1 rounded-sm text-xs">
+                <div className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"></div>
+                <span
+                  className={`px-2 py-1 rounded-md text-xs font-medium ${
+                    Number(selectedArticle.price) === 0
+                      ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300"
+                      : "bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300"
+                  }`}
+                >
                   {Number(selectedArticle.price) === 0
                     ? "Free"
                     : `${Number(selectedArticle.price) / 1e18} ETH`}
                 </span>
               </div>
-              <div className="prose prose-invert max-w-none whitespace-pre-line">
+              <div className="prose prose-zinc dark:prose-invert max-w-none whitespace-pre-line">
                 {isOwnProfile ||
                 Number(selectedArticle.price) === 0 ||
                 hasPaid ? (
@@ -509,40 +602,90 @@ export default function ProfilePage({
                 ) : (
                   <div>
                     <div className="mb-6">{selectedArticle.previewContent}</div>
-                    <div className="border-t border-zinc-800 pt-6 mt-6">
-                      <div className="bg-zinc-800 p-6 rounded-lg">
-                        <h3 className="text-xl font-semibold mb-3">
+                    <div className="border-t border-zinc-200 dark:border-zinc-800 pt-6 mt-6">
+                      <div className="bg-zinc-100 dark:bg-zinc-800/50 p-6 rounded-lg">
+                        <h3 className="text-xl font-semibold text-zinc-800 dark:text-zinc-200 mb-3">
                           Premium Content
                         </h3>
-                        <p className="text-zinc-400 mb-4">
-                          Pay {Number(selectedArticle.price) / 1e18} ETH to read
-                          the full article
+                        <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+                          Pay {Number(selectedArticle.price) / 1e18} ETH to
+                          unlock the full article content
                         </p>
                         {paymentSuccess ? (
-                          <div className="p-4 bg-green-900/30 border border-green-800 text-green-200 rounded-md mb-4">
-                            Payment successful! You now have access to the full
-                            content.
+                          <div className="p-4 bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 rounded-md mb-4 flex items-start">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            <span>
+                              Payment successful! You now have full access to
+                              this content.
+                            </span>
                           </div>
                         ) : (
                           <button
                             onClick={handlePayForAccess}
                             disabled={isPaying}
-                            className={`w-full py-3 px-4 rounded-md font-medium transition-colors ${
+                            className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
                               isPaying
-                                ? "bg-zinc-700 text-zinc-300 cursor-not-allowed"
-                                : "bg-blue-600 hover:bg-blue-700 text-white"
+                                ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                                : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg"
                             }`}
                           >
-                            {isPaying
-                              ? "Processing Payment..."
-                              : `Pay ${
-                                  Number(selectedArticle.price) / 1e18
-                                } ETH for Full Access`}
+                            {isPaying ? (
+                              <>
+                                <svg
+                                  className="animate-spin h-5 w-5 text-white"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  ></circle>
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  ></path>
+                                </svg>
+                                Processing Payment...
+                              </>
+                            ) : (
+                              `Pay ${
+                                Number(selectedArticle.price) / 1e18
+                              } ETH to Unlock`
+                            )}
                           </button>
                         )}
                         {paymentError && (
-                          <div className="mt-4 bg-red-900/30 border border-red-800 text-red-200 p-3 rounded-md">
-                            {paymentError}
+                          <div className="mt-4 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-3 rounded-md flex items-start">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            <span>{paymentError}</span>
                           </div>
                         )}
                       </div>
